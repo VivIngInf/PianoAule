@@ -150,7 +150,7 @@ def clean_calendar_response(response: str):
     logging.debug("Racchiuso le date in unix time")
     # questo serve per rimuovere l'ultima virgola che fa problemi con la libreria json quando si converte
     for i in range(100):
-        if response[-i] == ",":
+        if  i<len(response) and response[-i] == ",":
             response = response[:-i] + response[-i + 1:]
             break
     logging.info("Finito di pulire la stringa")
@@ -369,7 +369,7 @@ if __name__ == '__main__':
     #create_final_csv(filename="./files_csv/" + FILENAME + ".csv", aule=AULE_OID)
     # {k: AULE_OID[k] for i, k in enumerate(AULE_OID.keys()) if i < 100}
     # sta cosa complicata mi serviva per fare dei test su un numero inferiore di aule, si puo' ignorare facilmente
-    #csv_to_xlsx()
-    #conditional_formatting()
-    # xlsx_to_bmp()
+    csv_to_xlsx()
+    conditional_formatting()
+    xlsx_to_bmp()
     bmp_to_final_png()
