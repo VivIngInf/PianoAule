@@ -111,7 +111,7 @@ HEADERS = [
     'VEN 11:00', 'VEN 12:00', 'VEN 13:00', 'VEN 14:00', 'VEN 15:00', 'VEN 16:00', 'VEN 17:00', 'VEN 18:00']
 
 
-def get_calendar_from_oid(oid: str):
+def get_calendar_from_oid(oid: str, **kwargs):
     """
     Questa funzione fa la richiesta ad unipa per ottenere il calendario di una determinata aula
     :param oid: oid dell'aula
@@ -161,7 +161,7 @@ def clean_calendar_response(response: str):
     return response
 
 
-def parse_dates(calendar_list: list):
+def parse_dates(calendar_list: list, **kwargs: dict):
     """
     Rimpiazza la data in unix time con un dict contenente weekday e hour
     weekday rappresenta il giorno della settimana (0 - Lun, 6 - Dom)
@@ -170,6 +170,7 @@ def parse_dates(calendar_list: list):
     :return:
     """
     logger.debug("Cominciando a convertire le date da unix time...")
+    week_offset = kwargs.get("week_offset") if kwargs.get("week_offset") is not None else WEEK_OFFSET
     for lecture in calendar_list:
         unix_start = lecture.get("start").split("(")[1].split(")")[0][:10]
         unix_end = lecture.get("end").split("(")[1].split(")")[0][:10]
@@ -185,7 +186,7 @@ def parse_dates(calendar_list: list):
                                                                                          today.isocalendar()[1],
                                                                                          start_date.year,
                                                                                          today.year))
-        if start_date.isocalendar()[1] != today.isocalendar()[1] + WEEK_OFFSET or start_date.year != today.year:
+        if start_date.isocalendar()[1] != today.isocalendar()[1] + week_offset or start_date.year != today.year:
             # logger.debug("Quest'ultimo non era della settimana e dell'anno che stiamo analizzando, quindi ignorato")
             logger.debug("Scartato: " + start_date.strftime("%d-%m-%Y"))
             continue
@@ -211,16 +212,16 @@ def parse_dates(calendar_list: list):
     return calendar_list
 
 
-def ready_to_use_dict_calendar(oid):
+def ready_to_use_dict_calendar(oid, **kwargs):
     """
     Questa funzione prende in input l'oid e restituisce il dizionario con le lezioni della settimana corrente
     Non dovrebbero esserci problemi fin qui
     :param oid:
     :return:
     """
-    clean_c = get_calendar_from_oid(oid)
+    clean_c = get_calendar_from_oid(oid, **kwargs)
     cal = json.loads(clean_c)
-    return parse_dates(cal)
+    return parse_dates(cal, **kwargs)
 
 
 def get_conditional_formatting_rules(free_color: str = "6cae85", busy_color: str = "c6143a"):
@@ -248,7 +249,7 @@ def get_conditional_formatting_rules(free_color: str = "6cae85", busy_color: str
     return [rule_occ, rule_free, rule_day]
 
 
-def get_calendars_from_unipa(aule):
+def get_calendars_from_unipa(aule = AULE_OID, **kwargs):
     calendari = {}
     total = len(aule.items())
     index = 0
@@ -259,10 +260,10 @@ def get_calendars_from_unipa(aule):
         # oid_aula equivale al suo identificativo univoco (ES. 322)
         if not calendari.get(nome_aula):
             logger.info(f"Scaricando le lezioni nell'aula: {nome_aula} ({index}/{total})")
-            calendari[nome_aula] = ready_to_use_dict_calendar(oid_aula)
+            calendari[nome_aula] = ready_to_use_dict_calendar(oid_aula, **kwargs)
     return calendari
 
-def create_final_csv(filename, calendari: dict):
+def create_final_csv(filename, calendari: dict, **kwargs: dict):
     """
     Questa funzione dovrebbe essere quella che fetcha i dati dal sito e crea il file csv con tutte le informazioni.
     :param filename:
@@ -270,14 +271,13 @@ def create_final_csv(filename, calendari: dict):
     :return filenames: filenames used
     """
     # inizializzo gli oggetti che mi permettono di scrivere il csv
+    single_file = kwargs.get("single_file") if kwargs.get("single_file") is not None else SINGLE_FILE
     filenames = [filename]
-    if not SINGLE_FILE:
+    if not single_file:
         filenames = [str(filename[:-3] + d + ".csv") for d in GIORNI_DELLA_SETTIMANA[:5]]
-    # print(filenames)
-
 
     for giorno, filename in enumerate(filenames):
-        if SINGLE_FILE:
+        if single_file:
             current_headers = HEADERS
         else:
             current_headers = ["AULA"]
@@ -299,7 +299,7 @@ def create_final_csv(filename, calendari: dict):
                 start_wd = lezione["start"]["weekday"]
                 start_h = lezione["start"]["hour"]
                 end_h = lezione["end"]["hour"]
-                if start_wd != giorno and not SINGLE_FILE:
+                if start_wd != giorno and not single_file:
                     # se non combacia con il giorno del file (in caso sia in MULTI_FILE mode)
                     continue
                 day = str(GIORNI_DELLA_SETTIMANA[start_wd])
@@ -367,32 +367,35 @@ def xlsx_to_png(xlsx_basename: str, png_basename: str = None, cell_range: str = 
     piano.save(f"{png_basename or xlsx_basename}.png")
     
 
-def cleanup():
-    if "non_png" in CLEANUP:
+def cleanup(**kwargs: dict):
+    cleanup = kwargs.get("cleanup") if kwargs.get("cleanup") else CLEANUP
+    if "non_png" in cleanup:
         to_clean = ["csv", "xlsx", "bmp"]
-    elif "all" in CLEANUP: 
+    elif "all" in cleanup: 
         to_clean = ["csv", "xlsx", "bmp", "png"]
     else: 
-        to_clean = CLEANUP
+        to_clean = cleanup
     to_clean.append("bmp") # eliminarlo sempre, è inutile
     files = [f for f in os.listdir() if f.endswith(tuple(to_clean))]
     for f in files:
         os.remove(f)
 
 
-def generate_pngs():
-    calendari = get_calendars_from_unipa(aule=AULE_OID)
-    csvs = create_final_csv(filename=FILENAME + ".csv", calendari=calendari)
+def generate_pngs(**kwargs: dict):
+    single_file = kwargs.get("single_file") if kwargs.get("single_file") is not None else SINGLE_FILE
+
+    calendari = get_calendars_from_unipa(aule=AULE_OID, **kwargs)
+    csvs = create_final_csv(filename=FILENAME + ".csv", calendari=calendari, **kwargs)
     for csv in csvs:
         xlsx_basename = csv_to_xlsx(csv_basename=csv)
-        if not SINGLE_FILE:
+        if not single_file:
             cell_range = "A1:L48"
+        else: cell_range = "A1:BH48"
         xlsx_to_png(xlsx_basename, cell_range=cell_range)
     logger.info("Pulendo i file inutili...")
-    cleanup()
+    cleanup(**kwargs)
 
 
 if __name__ == '__main__':
     logger.info("Starting...")
     generate_pngs()
-
