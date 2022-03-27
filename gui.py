@@ -1,15 +1,34 @@
 from calendar import week
 import tkinter as tk
 import tkinter.font as tkFont
+from tkinter import ttk
+from os import startfile, path
+import threading
 from pianoaule import generate_pngs, WORKING_DIR
-from os import startfile, path, getcwd
 
 single_file: bool
 cleanup: list
 week_offset: int
 
-def print_configs():
-    print(f"SingleFile: {single_file}|Cleanup={cleanup}|Offset={week_offset}")
+def generate_thread(**kwargs):
+    global generate_thread
+    generate_thread = threading.Thread(target=generate_pngs, kwargs=kwargs)
+    generate_thread.daemon = True
+    pbar.start()
+    btn_generate["state"] = tk.DISABLED
+    btn_generate.config(text="Processando...")
+    generate_thread.start()
+    root.after(1000, check_gen_thread)
+
+def check_gen_thread():
+    if generate_thread.is_alive():
+        root.after(100, check_gen_thread)
+    else:
+        pbar.stop()
+        btn_generate.config(text="Genera!")
+        btn_generate["state"] = tk.NORMAL
+
+
 
 def btn_generate_command():
     single_file = radio_value.get() == "single"
@@ -17,13 +36,8 @@ def btn_generate_command():
     cleanup = []
     if csv.get(): cleanup.append("csv")
     if xlsx.get(): cleanup.append("xlsx")
-    # print(f"{single_file=} | {week_offset=} | {cleanup=}")
 
-    btn_generate.config(text="Processando...") 
-    btn_generate["state"] = tk.DISABLED
-    generate_pngs(single_file=single_file, week_offset=week_offset, cleanup=cleanup)
-    btn_generate.config(text="Genera!")
-    btn_generate["state"] = tk.NORMAL
+    generate_thread(single_file=single_file, week_offset=week_offset, cleanup=cleanup)
     return
 
 
@@ -33,20 +47,14 @@ def btn_opendir_command():
     except:
         btn_opendir.config(text="Errore :(")
 
-
 root = tk.Tk()
-try:
-    root.iconphoto(False, tk.PhotoImage(file=path.abspath(path.join( getcwd(),"..",  './logo.png'))))
-except:
-    pass
+root.title("Piano Aule by VI")
 
 csv = tk.IntVar(None, 1)
 xlsx = tk.IntVar(None, 1)
 week_value = tk.StringVar(None, 'this')
 radio_value = tk.StringVar(None, "single")
 
-
-root.title("Piano Aule by VI")
 width=600
 height=200
 screenwidth = root.winfo_screenwidth()
@@ -161,7 +169,8 @@ cbox_xlsx["offvalue"] = "0"
 cbox_xlsx["onvalue"] = "1"
 
 
+# Progress bar x=30, y=150, w=400, h=25
+pbar = ttk.Progressbar(root, mode="indeterminate")
+pbar.place(x=30, y=150, w=400, h=25)
 
-
-    
 root.mainloop()
