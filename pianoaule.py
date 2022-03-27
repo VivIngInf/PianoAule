@@ -13,9 +13,10 @@ from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.styles.differential import DifferentialStyle
 from openpyxl.formatting.rule import Rule
+from openpyxl.styles.borders import Border, Side
 #
 from openpyxl.utils import get_column_letter
-from PIL import Image, ImageDraw
+from PIL import Image
 # Argument Parser
 WORKING_DIR = f"{os.path.abspath(os.getcwd())}/output"
 os.makedirs(WORKING_DIR, exist_ok=True)
@@ -231,6 +232,7 @@ def get_conditional_formatting_rules(free_color: str = "6cae85", busy_color: str
     green_fill = PatternFill(bgColor=free_color)
     green_font = Font(color=free_color)
     white_font = Font(color="ffffff")
+    
 
     # formattazioni condizionali in base alle etichette che abbiamo inserito in fase di scrittura
     # fill indica il background, font il colore del font
@@ -329,8 +331,12 @@ def csv_to_xlsx(csv_basename: str, xlsx_basename: str = None):
     wb = openpyxl.Workbook()
     ws = wb.active
 
-    # elimina i bordi delle celle
-    # ws.sheet_view.showGridLines = False
+    # aggiungi i bordi alle celle
+    ws.sheet_view.showGridLines = False
+    thin_border = Border(left=Side(style='thin'), 
+                        right=Side(style='thin'), 
+                        top=Side(style='thin'), 
+                        bottom=Side(style='thin'))
 
     # crea il csv e separa le celle tramite virgole
     csv_filename = csv_basename if csv_basename.endswith(".csv") else csv_basename + ".csv"
@@ -346,6 +352,7 @@ def csv_to_xlsx(csv_basename: str, xlsx_basename: str = None):
         for j in range(1, 49):
             ws.cell(row=j, column=i).alignment = Alignment(horizontal="center")
             ws.cell(row=j, column=i).font = Font(name="Segoe UI", size=11)
+            ws.cell(row=j, column=i).border = thin_border
 
     # Applico le regole di formattazione
     rules = get_conditional_formatting_rules()
