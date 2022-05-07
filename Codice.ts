@@ -99,11 +99,12 @@ function updateView(ss: GoogleAppsScript.Spreadsheet.Spreadsheet = null){
                 Logger.log(`OID: ${oid}, Aula: ${u.aula},D:${event.start.getDay()}, ${event.start.getHours()}:${event.start.getMinutes()}-${event.end.getHours()}:${event.end.getMinutes()}, ${rangeToEdit.getA1Notation()}`)
             })
         })
+        day_range.offset(Math.max(oids.length, aule.length) + 1, 0).clearContent();
     })
 }
 
 function mainFunction(e: GoogleAppsScript.Events.TimeDriven) {
-    
+
     fetchListaAule();
     const urls = oids.map(oid => `https://offweb.unipa.it/offweb/public/aula/calendar.seam?oidAula=${oid}`);
     let responses: Array<GoogleAppsScript.URL_Fetch.HTTPResponse> = [];
