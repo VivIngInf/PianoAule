@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <base target="_top">
+    <title>Piano Aule by VI Odio</title>
+
+    <script>
+        var coppie = {};
+        var isLoading = true;
+        function save(datas) {
+            Object.entries(datas).map((entry) => {
+                let key = entry[0];
+                let value = entry[1];
+                coppie[key] = JSON.parse(value);
+                coppie[key].events.forEach((ev, index) => {
+                    coppie[key].events[index].start = new Date(ev.start);
+                    coppie[key].events[index].end = new Date(ev.end);
+                })
+            })
+            coppie = new Map(Object.entries(coppie));
+            isLoading = false;
+            console.log("Dati recuperati")
+        }
+        window.addEventListener("load", () => {
+            google.script.run.withSuccessHandler(save).webifyData();
+
+            let currH = new Date().getHours();
+            let defaultH = currH < 19 ? currH : 19;
+            defaultH = defaultH > 8 ? defaultH : 8;
+            // console.log(defaultH)
+            document.getElementById("timesel").value = defaultH;
+
+        })
+        function fetchAuleLibere() {
+            let searchBtn = document.getElementById("search");
+            let timesel = document.getElementById("timesel").value;
+            let today = new Date();
+            //TODO: TEST
+            today.setDate(5);
+            today.setHours(timesel);
+            today.setMinutes(0);
+            today.setSeconds(0);
+            console.log(today.toUTCString());
+            let auleLibere = [];
+            const prevValue = searchBtn.value;
+            while (isLoading) {
+                searchBtn.setAttribute("disabled", true);
+                searchBtn.value = "Caricando...";
+            }
+            searchBtn.value = prevValue;
+            searchBtn.removeAttribute("disabled");
+
+
+            coppie.forEach((data, oid) => {
+                if (!data.events.some(ev => ev.start <= today && today < ev.end)) {
+                    // Questa aula è libera. Cerchiamo di capire quando è la prossima lezione
+                    let duration = 30;
+                    data.events.forEach((ev) => {
+                        if (today.getDate() === ev.start.getDate()) {
+                            let diff = ev.start.getHours() - today.getHours();
+                            duration = diff > 0 && diff < duration ? diff : duration
+                        }
+                    })
+                    if (duration != 30) {
+                        data.hoursTillNext = duration;
+                        auleLibere.push(data)
+                    }
+                }
+            })
+            console.log(auleLibere);
+            let table = document.getElementById("listtable");
+            var tableRows = table.getElementsByTagName('tr');
+            var rowCount = tableRows.length;
+
+            for (var x = rowCount - 1; x > 0; x--) {
+                table.deleteRow(x);
+            }
+
+            auleLibere.sort((prev, next) => next.hoursTillNext - prev.hoursTillNext);
+            auleLibere.forEach(aula => {
+                let newrow = table.insertRow();
+                let cellName = newrow.insertCell()
+                cellName.innerHTML = aula.aula;
+                let cellTime = newrow.insertCell();
+                cellTime.innerHTML = "" + aula.hoursTillNext + "h";
+            })
+        }
+    </script>
+</head>
+
+<body>
+    <header style="width: 80%;margin: auto">
+        <h1> Piano Aule by VI Odioodio</h1>
+        <div id="searcher">
+            <label for="timesel">Seleziona l'ora</label>
+            <input type="number" style="width: 5em" name="timesel" id="timesel" min="8" max="20">
+            <input type="button" id="search" value="Cerca le aule libere!" onclick="fetchAuleLibere()">
+        </div>
+    </header>
+    <main style="width: 70%; margin: auto">
+        <div id="list">
+            <table id="listtable">
+                <tr>
+                    <th>Aula</th>
+                    <th>Libera per</th>
+                </tr>
+            </table>
+        </div>
+    </main>
+
+</body>
+
+</html>

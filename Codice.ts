@@ -81,6 +81,7 @@ function fetchListaAule(ss: GoogleAppsScript.Spreadsheet.Spreadsheet = null){
         coppie[c[0]] = {aula: c[1], row: i+2, events: null};
         oids.push(c[0]);
         aule.push(c[1]);
+    });
     cache.put("aule", JSON.stringify(aule), CACHE_DUR);
     cache.put("oids", JSON.stringify(oids), CACHE_DUR);
 }
@@ -143,11 +144,11 @@ function updateView(ss: GoogleAppsScript.Spreadsheet.Spreadsheet = null){
 
 function fetchAllData(){
     fetchListaAule();
-    const cache = CacheService.getDocumentCache();
     let temp = unpackCoppie()
     if (temp !== null){
-        Logger.log("Utilizzando i dati cachati")
-        return coppie;
+        Logger.log("Utilizzando i dati cachati...")
+        Logger.log(temp);
+        return temp;
     }
     Logger.log("Nessun dato cachato...")
     const urls = oids.map(oid => `https://offweb.unipa.it/offweb/public/aula/calendar.seam?oidAula=${oid}`);
@@ -165,10 +166,33 @@ function fetchAllData(){
     }
     responses.forEach((resp, i) => parseSingleResponse(resp, oids[i], day));
     packCoppie()
+    Logger.log("Returning...");
+    Logger.log(coppie);
     return coppie;
 }
 
 function mainFunction(e: GoogleAppsScript.Events.TimeDriven) {
     fetchAllData();
     updateView();
+}
+
+// GAPS Non permette il passaggio di oggetti di tipo Date, quindi li devo riconvertire in str
+function webifyData(){
+    //Sfrutto il caching system
+    fetchAllData();
+    let cache = CacheService.getDocumentCache(); 
+    let datas = cache.getAll(oids);
+    Object.entries(datas).map((entry) => {
+        let key = entry[0];
+        let value = entry[1];
+        coppie[key] = JSON.parse(value);
+    });
+    return datas;
+
+}
+
+function doGet(e: GoogleAppsScript.Events.DoGet){
+    var output = HtmlService.createHtmlOutputFromFile("index");
+    output.setTitle("Piano Aule By VI");
+    return output;
 }
