@@ -9,6 +9,7 @@ const NR_GIOVEDI = "GIOVEDI";
 const NR_VENERDI = "VENERDI";
 const FREE = "FREE";
 const OCC = "OCC";
+const CACHE_DUR = 60 * 60 * 12; // 12h
 
 interface SingleEvent {
     title: string,
@@ -33,7 +34,44 @@ var oids: Array<string> = [];
 var aule: Array<string> = [];
 var coppie: {[oid: string]: {aula: string, row: number, events: Array<SingleEvent>}} = {};
 
+function packCoppie() :{[oid: string]: string}{
+    const cache = CacheService.getDocumentCache()
+    var copia: {[oid: string]: string} = {}
+    oids.forEach(oid => {
+        copia[oid] = JSON.stringify(coppie[oid]);
+    })
+    cache.putAll(copia);
+    return copia
+}
+
+function unpackCoppie(){
+    const cache = CacheService.getDocumentCache();
+    const datas = cache.getAll(oids);
+    if(Object.keys(datas).length !== oids.length) return null;
+    Object.entries(datas).map((entry) => {
+        let key = entry[0];
+        let value = entry[1];
+        coppie[key] = JSON.parse(value);
+        coppie[key].events.forEach((ev, index) => {
+            coppie[key].events[index].start = new Date(ev.start);
+            coppie[key].events[index].end = new Date(ev.end);
+        })
+    })
+    return coppie
+}
+
 function fetchListaAule(ss: GoogleAppsScript.Spreadsheet.Spreadsheet = null){
+    let cache = CacheService.getDocumentCache();
+    let temp_oids = cache.get("oids")
+    let temp_aule = cache.get("aule");
+    if (temp_aule !== null && temp_oids !== null){
+        aule = JSON.parse(temp_aule);
+        oids = JSON.parse(temp_oids);
+        oids.forEach((oid, i) => {
+            coppie[oid] = {aula: aule[i], row: i+2, events: null}
+        })
+        return;
+    }
     if (ss === null)
         ss = SpreadsheetApp.getActiveSpreadsheet();
     let result = ss.getRangeByName(NR_COPPIE).getValues();
@@ -43,9 +81,9 @@ function fetchListaAule(ss: GoogleAppsScript.Spreadsheet.Spreadsheet = null){
         coppie[c[0]] = {aula: c[1], row: i+2, events: null};
         oids.push(c[0]);
         aule.push(c[1]);
-    })
-}    const ss = SpreadsheetApp.getActiveSpreadsheet();
-
+    cache.put("aule", JSON.stringify(aule), CACHE_DUR);
+    cache.put("oids", JSON.stringify(oids), CACHE_DUR);
+}
 
 function filter_week(events: Array<SingleEvent>, day: Date): Array<SingleEvent>{
     let first = day.GetFirstDayOfWeek();
@@ -103,9 +141,15 @@ function updateView(ss: GoogleAppsScript.Spreadsheet.Spreadsheet = null){
     })
 }
 
-function mainFunction(e: GoogleAppsScript.Events.TimeDriven) {
-
+function fetchAllData(){
     fetchListaAule();
+    const cache = CacheService.getDocumentCache();
+    let temp = unpackCoppie()
+    if (temp !== null){
+        Logger.log("Utilizzando i dati cachati")
+        return coppie;
+    }
+    Logger.log("Nessun dato cachato...")
     const urls = oids.map(oid => `https://offweb.unipa.it/offweb/public/aula/calendar.seam?oidAula=${oid}`);
     let responses: Array<GoogleAppsScript.URL_Fetch.HTTPResponse> = [];
     const request_limit = 100 - (1);
@@ -120,5 +164,11 @@ function mainFunction(e: GoogleAppsScript.Events.TimeDriven) {
         day = new Date(day.setDate(day.getDate() + 7))
     }
     responses.forEach((resp, i) => parseSingleResponse(resp, oids[i], day));
+    packCoppie()
+    return coppie;
+}
+
+function mainFunction(e: GoogleAppsScript.Events.TimeDriven) {
+    fetchAllData();
     updateView();
 }
