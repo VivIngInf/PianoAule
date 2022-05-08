@@ -40,7 +40,7 @@ function packCoppie() :{[oid: string]: string}{
     oids.forEach(oid => {
         copia[oid] = JSON.stringify(coppie[oid]);
     })
-    cache.putAll(copia);
+    cache.putAll(copia, CACHE_DUR);
     return copia
 }
 
@@ -199,5 +199,6 @@ function doGet(e: GoogleAppsScript.Events.DoGet){
     output.addMetaTag('apple-mobile-web-app-capable', 'yes');
     
     output.setFaviconUrl("https://i.imgur.com/6dYdASi.png");
+    output.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     return output;
 }

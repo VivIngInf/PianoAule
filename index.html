@@ -1,20 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 
 <head>
     <base target="_top">
-    <title>Piano Aule by VI Odio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <title>Piano Aule by VI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        th {
+            text-align: center;
+        }
+
         #loading {
             /* display: inline-block; */
-            width: 22px;
-            height: 22px;
-            border: 3px solid rgba(122, 122, 122, .3);
+
+
+            width: 150px;
+            height: 150px;
+            /* border: 3px solid rgba(122, 122, 122, .3);
             border-radius: 50%;
-            border-top-color: rgb(122,122,122);
+            border-top-color: rgb(122, 122, 122); */
+            /* border-bottom-color: rgb(122, 122, 122); */
+
             margin: auto;
-            animation: spin 1s ease-in-out infinite;
-            -webkit-animation: spin 1s ease-in-out infinite;
+            animation: spin 1.5s cubic-bezier(0.6, -0.28, 0.735, 0.045) infinite;
+            -webkit-animation: spin 1.5s cubic-bezier(0.6, -0.28, 0.735, 0.045) infinite;
         }
 
         @keyframes spin {
@@ -33,7 +44,6 @@
         var coppie = {};
         var isLoading = true;
         function save(datas) {
-            document.getElementById("loading").style.display = "none";
             Object.entries(datas).map((entry) => {
                 let key = entry[0];
                 let value = entry[1];
@@ -57,10 +67,13 @@
                 return;
             }
             else {
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("list").style.display = "block";
+
                 fetchAuleLibere();
             }
         }
-        function fetchAuleLibere() {
+        function fetchAuleLibere(orderBy = null) {
             // let searchBtn = document.getElementById("search");
             // const prevValue = "Cerca!";
             // searchBtn.value = prevValue;
@@ -94,6 +107,7 @@
                     else {
                         data.msg = "";
                     }
+                    data.url = "https://offweb.unipa.it/offweb/public/aula/calendar.seam?oidAula=" + parseInt(oid);
                     data.hoursTillNext = minimum_duration;
                     auleLibere.push(data)
                 }
@@ -106,12 +120,19 @@
             for (var x = rowCount - 1; x > 0; x--) {
                 table.deleteRow(x);
             }
+            if (orderBy === null || orderBy === "duration")
+                auleLibere.sort((prev, next) => next.hoursTillNext === prev.hoursTillNext ? next.aula < prev.aula : next.hoursTillNext - prev.hoursTillNext);
+            else
+                auleLibere.sort((prev, next) => next.aula < prev.aula);
 
-            auleLibere.sort((prev, next) => next.hoursTillNext - prev.hoursTillNext);
             auleLibere.forEach(aula => {
                 let newrow = table.insertRow();
                 let cellName = newrow.insertCell()
-                cellName.innerHTML = aula.aula;
+                let link_element = document.createElement("a");
+                link_element.setAttribute("href", aula.url);
+                link_element.setAttribute("target", "_blank");
+                link_element.innerHTML = aula.aula
+                cellName.appendChild(link_element);
                 let cellTime = newrow.insertCell();
                 cellTime.innerHTML = "" + aula.hoursTillNext + "h";
                 let cellMsg = newrow.insertCell();
@@ -131,44 +152,79 @@
             let currH = today.getHours();
             let defaultH = currH < 19 ? currH : 19;
             defaultH = defaultH > 8 ? defaultH : 8;
-            document.getElementById("timesel").value = defaultH;
+            document.getElementById("timesel").selectedIndex = defaultH - 8;
             waitForData()
 
         })
     </script>
 </head>
 
-<body>
-    <header style="width: 80%;margin: auto">
-        <h1> Piano Aule by VI Odioodio</h1>
-        <div id="searcher">
-            <label for="daysel">Seleziona il giorno</label>
-            <select name="daysel" id="daysel" onchange="waitForData()">
-                <option value="1">Lunedì</option>
-                <option value="2">Martedì</option>
-                <option value="3">Mercoledì</option>
-                <option value="4">Giovedì</option>
-                <option value="5">Venerdì</option>
-            </select>
-            <label for="timesel">Seleziona l'ora</label>
-            <input type="number" style="width: 5em" name="timesel" id="timesel" min="8" max="20"
-                onchange="waitForData()">
-            <!-- <input type="button" id="search" value="Cerca!" onclick="waitForData()"> -->
+<body class="text-center center-block">
+    <header class="container-fluid">
+        <!-- <h1> Piano Aule by VI</h1> -->
+        <div id="searcher" class="container-fluid">
+            <form action="" method="POST" role="form" class="form-inline" style="width: fit-content; margin:auto">
+                <div class="row">
+                    <div class="col">
+                        <label for="daysel" class="form-label">Seleziona il giorno</label>
+                    </div>
+                    <div class="col">
+                        <select style="max-width: 100px;margin: auto" name="daysel" id="daysel" class="form-control"
+                            onchange="waitForData()">
+                            <option value="1">Lunedì</option>
+                            <option value="2">Martedì</option>
+                            <option value="3">Mercoledì</option>
+                            <option value="4">Giovedì</option>
+                            <option value="5">Venerdì</option>
+                        </select>
+                    </div>
+
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label class="form-label" for="timesel">Seleziona l'ora</label>
+
+                    </div>
+                    <div class="col">
+                        <select style="max-width: 100px;margin: auto" name="timesel" id="timesel"
+                            onchange="waitForData()" class="timesel form-control">
+                            <option value="8">08:00</option>
+                            <option value="9">09:00</option>
+                            <option value="10">10:00</option>
+                            <option value="11">11:00</option>
+                            <option value="12">12:00</option>
+                            <option value="13">13:00</option>
+                            <option value="14">14:00</option>
+                            <option value="15">15:00</option>
+                            <option value="16">16:00</option>
+                            <option value="17">17:00</option>
+                            <option value="18">18:00</option>
+                            <option value="19">19:00</option>
+                            <option value="20">20:00</option>
+                        </select>
+
+                    </div>
+                </div>
+            </form>
         </div>
     </header>
-    <main style="width: 70%; margin: auto">
-        <div id="loading" style="margin:auto"></div>
-        <div id="list">
-            <table id="listtable" style="text-align: center; width: 75%">
-                <tr>
-                    <th>Aula</th>
-                    <th>Libera per</th>
-                    <th>Note</th>
-                </tr>
+    <main class="container-fluid" style="margin-top: 20px;">
+        <div id="loading" style="margin:auto">
+        <img src="https://i.imgur.com/2cp3TAB.png" width="150px" alt="Caricando...">
+        </div>
+        <div id="list" class="table-responsive" style="display: none;">
+            <table class="table table-hover table-bordered table-condensed" id="listtable"
+                style="text-align: center;width: fit-content;margin: auto;">
+                <thead>
+                    <tr>
+                        <th onclick="fetchAuleLibere('name')">Aula</th>
+                        <th onclick="fetchAuleLibere('duration')">Libera per</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
             </table>
         </div>
     </main>
-
 </body>
 
 </html>
