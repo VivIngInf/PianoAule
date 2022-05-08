@@ -194,5 +194,10 @@ function webifyData(){
 function doGet(e: GoogleAppsScript.Events.DoGet){
     var output = HtmlService.createHtmlOutputFromFile("index");
     output.setTitle("Piano Aule By VI");
+    output.addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    output.addMetaTag('mobile-web-app-capable', 'yes');
+    output.addMetaTag('apple-mobile-web-app-capable', 'yes');
+    
+    output.setFaviconUrl("https://i.imgur.com/6dYdASi.png");
     return output;
 }

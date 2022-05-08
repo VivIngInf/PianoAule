@@ -4,11 +4,36 @@
 <head>
     <base target="_top">
     <title>Piano Aule by VI Odio</title>
+    <style>
+        #loading {
+            /* display: inline-block; */
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(122, 122, 122, .3);
+            border-radius: 50%;
+            border-top-color: rgb(122,122,122);
+            margin: auto;
+            animation: spin 1s ease-in-out infinite;
+            -webkit-animation: spin 1s ease-in-out infinite;
+        }
 
+        @keyframes spin {
+            to {
+                -webkit-transform: rotate(360deg);
+            }
+        }
+
+        @-webkit-keyframes spin {
+            to {
+                -webkit-transform: rotate(360deg);
+            }
+        }
+    </style>
     <script>
         var coppie = {};
         var isLoading = true;
         function save(datas) {
+            document.getElementById("loading").style.display = "none";
             Object.entries(datas).map((entry) => {
                 let key = entry[0];
                 let value = entry[1];
@@ -22,50 +47,55 @@
             isLoading = false;
             console.log("Dati recuperati")
         }
-        window.addEventListener("load", () => {
-            google.script.run.withSuccessHandler(save).webifyData();
-
-            let currH = new Date().getHours();
-            let defaultH = currH < 19 ? currH : 19;
-            defaultH = defaultH > 8 ? defaultH : 8;
-            // console.log(defaultH)
-            document.getElementById("timesel").value = defaultH;
-
-        })
+        function waitForData() {
+            // let searchBtn = document.getElementById("search");
+            if (isLoading === true) {
+                // searchBtn.setAttribute("disabled", true);
+                // searchBtn.value = "Caricando...";
+                console.log("Waiting for data...")
+                setTimeout(waitForData, 750);
+                return;
+            }
+            else {
+                fetchAuleLibere();
+            }
+        }
         function fetchAuleLibere() {
-            let searchBtn = document.getElementById("search");
+            // let searchBtn = document.getElementById("search");
+            // const prevValue = "Cerca!";
+            // searchBtn.value = prevValue;
+            // searchBtn.removeAttribute("disabled");
+
             let timesel = document.getElementById("timesel").value;
+            let daysel = parseInt(document.getElementById("daysel").value);
             let today = new Date();
+            let distance = daysel - today.getDay();
             //TODO: TEST
-            today.setDate(5);
+            today.setDate(today.getDate() + distance);
             today.setHours(timesel);
             today.setMinutes(0);
             today.setSeconds(0);
-            console.log(today.toUTCString());
+            console.log(today.toString());
             let auleLibere = [];
-            const prevValue = searchBtn.value;
-            while (isLoading) {
-                searchBtn.setAttribute("disabled", true);
-                searchBtn.value = "Caricando...";
-            }
-            searchBtn.value = prevValue;
-            searchBtn.removeAttribute("disabled");
 
 
             coppie.forEach((data, oid) => {
-                if (!data.events.some(ev => ev.start <= today && today < ev.end)) {
+                const today_events = data.events.filter(ev => ev.start.getDay() === today.getDay());
+                if (!today_events.some(ev => ev.start.getHours() <= today.getHours() && today.getHours() < ev.end.getHours())) {
                     // Questa aula è libera. Cerchiamo di capire quando è la prossima lezione
-                    let duration = 30;
-                    data.events.forEach((ev) => {
-                        if (today.getDate() === ev.start.getDate()) {
-                            let diff = ev.start.getHours() - today.getHours();
-                            duration = diff > 0 && diff < duration ? diff : duration
-                        }
+                    let minimum_duration = 20 - today.getHours(); // Lo pongo uguale al massimo teorico
+                    today_events.forEach((ev) => {
+                        let diff = ev.start.getHours() - today.getHours();
+                        minimum_duration = diff > 0 && diff < minimum_duration ? diff : minimum_duration
                     })
-                    if (duration != 30) {
-                        data.hoursTillNext = duration;
-                        auleLibere.push(data)
+                    if (minimum_duration === 20 - today.getHours() && minimum_duration > 10) {
+                        data.msg = "L'aula potrebbe essere chiusa :(";
                     }
+                    else {
+                        data.msg = "";
+                    }
+                    data.hoursTillNext = minimum_duration;
+                    auleLibere.push(data)
                 }
             })
             console.log(auleLibere);
@@ -84,8 +114,27 @@
                 cellName.innerHTML = aula.aula;
                 let cellTime = newrow.insertCell();
                 cellTime.innerHTML = "" + aula.hoursTillNext + "h";
+                let cellMsg = newrow.insertCell();
+                cellMsg.innerHTML = aula.msg === undefined ? "" : aula.msg;
             })
         }
+        window.addEventListener("load", () => {
+            try { google.script.run.withSuccessHandler(save).webifyData(); } catch { }
+            let today = new Date();
+            // Default Day
+            let currD = today.getDay();
+            var defaultD = currD < 6 ? currD : 5;
+            defaultD = defaultD > 0 ? defaultD : 1;
+            const selectList = document.getElementById("daysel");
+            selectList.selectedIndex = defaultD - 1;
+            // Default Hour
+            let currH = today.getHours();
+            let defaultH = currH < 19 ? currH : 19;
+            defaultH = defaultH > 8 ? defaultH : 8;
+            document.getElementById("timesel").value = defaultH;
+            waitForData()
+
+        })
     </script>
 </head>
 
@@ -93,17 +142,28 @@
     <header style="width: 80%;margin: auto">
         <h1> Piano Aule by VI Odioodio</h1>
         <div id="searcher">
+            <label for="daysel">Seleziona il giorno</label>
+            <select name="daysel" id="daysel" onchange="waitForData()">
+                <option value="1">Lunedì</option>
+                <option value="2">Martedì</option>
+                <option value="3">Mercoledì</option>
+                <option value="4">Giovedì</option>
+                <option value="5">Venerdì</option>
+            </select>
             <label for="timesel">Seleziona l'ora</label>
-            <input type="number" style="width: 5em" name="timesel" id="timesel" min="8" max="20">
-            <input type="button" id="search" value="Cerca le aule libere!" onclick="fetchAuleLibere()">
+            <input type="number" style="width: 5em" name="timesel" id="timesel" min="8" max="20"
+                onchange="waitForData()">
+            <!-- <input type="button" id="search" value="Cerca!" onclick="waitForData()"> -->
         </div>
     </header>
     <main style="width: 70%; margin: auto">
+        <div id="loading" style="margin:auto"></div>
         <div id="list">
-            <table id="listtable">
+            <table id="listtable" style="text-align: center; width: 75%">
                 <tr>
                     <th>Aula</th>
                     <th>Libera per</th>
+                    <th>Note</th>
                 </tr>
             </table>
         </div>
