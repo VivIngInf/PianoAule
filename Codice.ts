@@ -124,6 +124,7 @@ function updateView(ss: GoogleAppsScript.Spreadsheet.Spreadsheet = null){
     const sss = ss.getActiveSheet() || ss.getSheets()[0];
     const days = [NR_LUNEDI, NR_MARTEDI, NR_MERCOLEDI, NR_GIOVEDI, NR_VENERDI]
     days.forEach((ns_day, day_index) => {
+        Logger.log(`Writing day ${ns_day}`)
         const day_range = ss.getRangeByName(ns_day)
         day_range.offset(1,0).setValue(FREE);
         const first_column = day_range.getColumn();
@@ -133,9 +134,10 @@ function updateView(ss: GoogleAppsScript.Spreadsheet.Spreadsheet = null){
             u.events.forEach( event => {
                 if (event.start.getUTCDay() != (day_index + 1)) return
                 const duration = event.end.getHours() - event.start.getHours();
+                if (duration <= 0) return; // Una lezione da meno di un'ora fa danno...
                 const rangeToEdit = sss.getRange(u.row, first_column + (event.start.getHours() - first_hour), 1, duration);
                 rangeToEdit.setValue(OCC)
-                Logger.log(`OID: ${oid}, Aula: ${u.aula},D:${event.start.getDay()}, ${event.start.getHours()}:${event.start.getMinutes()}-${event.end.getHours()}:${event.end.getMinutes()}, ${rangeToEdit.getA1Notation()}`)
+                // Logger.log(`OID: ${oid}, Aula: ${u.aula},D:${event.start.getDay()}, ${event.start.getHours()}:${event.start.getMinutes()}-${event.end.getHours()}:${event.end.getMinutes()}, ${rangeToEdit.getA1Notation()}`)
             })
         })
         day_range.offset(Math.max(oids.length, aule.length) + 1, 0).clearContent();
@@ -147,7 +149,7 @@ function fetchAllData(){
     let temp = unpackCoppie()
     if (temp !== null){
         Logger.log("Utilizzando i dati cachati...")
-        Logger.log(temp);
+        // Logger.log(temp);
         return temp;
     }
     Logger.log("Nessun dato cachato...")
@@ -166,8 +168,8 @@ function fetchAllData(){
     }
     responses.forEach((resp, i) => parseSingleResponse(resp, oids[i], day));
     packCoppie()
-    Logger.log("Returning...");
-    Logger.log(coppie);
+    Logger.log("Returning and caching...");
+    // Logger.log(coppie);
     return coppie;
 }
 
@@ -189,6 +191,13 @@ function webifyData(){
     });
     return datas;
 
+}
+
+function forceCacheClear(){
+    const cache = CacheService.getDocumentCache();
+    cache.removeAll(["oids", "aule"]);
+    fetchListaAule();
+    cache.removeAll(oids);
 }
 
 function doGet(e: GoogleAppsScript.Events.DoGet){
