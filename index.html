@@ -93,24 +93,23 @@
 
 
             coppie.forEach((data, oid) => {
-                const today_events = data.events.filter(ev => ev.start.getDay() === today.getDay());
-                if (!today_events.some(ev => ev.start.getHours() <= today.getHours() && today.getHours() < ev.end.getHours())) {
-                    // Questa aula è libera. Cerchiamo di capire quando è la prossima lezione
-                    let minimum_duration = 20 - today.getHours(); // Lo pongo uguale al massimo teorico
-                    today_events.forEach((ev) => {
-                        let diff = ev.start.getHours() - today.getHours();
-                        minimum_duration = diff > 0 && diff < minimum_duration ? diff : minimum_duration
-                    })
-                    if (minimum_duration === 20 - today.getHours() && minimum_duration > 10) {
-                        data.msg = "L'aula potrebbe essere chiusa :(";
-                    }
-                    else {
-                        data.msg = "";
-                    }
-                    data.url = "https://offweb.unipa.it/offweb/public/aula/calendar.seam?oidAula=" + parseInt(oid);
-                    data.hoursTillNext = minimum_duration;
-                    auleLibere.push(data)
+                let today_events = data.events.filter(ev => ev.start.getDay() === today.getDay());
+                data.duration = 21 - today.getHours();
+                data.next_event = null;
+                if (today_events.length === 0) {
+                    data.msg = "Non ci sono lezioni tutta la giornata 🤔";
                 }
+                else {
+                    today_events.sort((a, b) => a.start - b.start) // Ordino temporalmente
+                    if (today_events.some(event => (event.start < today && today < event.end))) return;
+                    today_events = today_events.filter(event => event.start > today); // Elimino le lezioni precedenti
+                    if (today_events.length > 0){
+                        data.next_event = today_events[0];
+                        data.duration = data.next_event.start.getHours() - today.getHours();
+                    }
+                }
+                data.url = "https://offweb.unipa.it/offweb/public/aula/calendar.seam?oidAula=" + parseInt(oid);
+                auleLibere.push(data)
             })
             console.log(auleLibere);
             let table = document.getElementById("listtable");
@@ -121,7 +120,7 @@
                 table.deleteRow(x);
             }
             if (orderBy === null || orderBy === "duration")
-                auleLibere.sort((prev, next) => next.hoursTillNext === prev.hoursTillNext ? next.aula < prev.aula : next.hoursTillNext - prev.hoursTillNext);
+                auleLibere.sort((prev, next) => next.duration === prev.duration ? next.aula < prev.aula : next.duration - prev.duration);
             else
                 auleLibere.sort((prev, next) => next.aula < prev.aula);
 
@@ -134,7 +133,10 @@
                 link_element.innerHTML = aula.aula
                 cellName.appendChild(link_element);
                 let cellTime = newrow.insertCell();
-                cellTime.innerHTML = "" + aula.hoursTillNext + "h";
+                if (aula.next_event === null)
+                    cellTime.innerHTML = `Domani 😊`
+                else
+                    cellTime.innerHTML = `${aula.next_event.start.getHours().toString().padStart(2, "0")}:${aula.next_event.start.getMinutes().toString().padStart(2, "0")}`;
                 let cellMsg = newrow.insertCell();
                 cellMsg.innerHTML = aula.msg === undefined ? "" : aula.msg;
             })
@@ -160,12 +162,12 @@
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y14PHH0JFE"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
 
-            gtag('config', 'G-Y14PHH0JFE');
-            </script>
+        gtag('config', 'G-Y14PHH0JFE');
+    </script>
 </head>
 
 <body class="text-center center-block">
@@ -219,7 +221,7 @@
     </header>
     <main class="container-fluid" style="margin-top: 20px;">
         <div id="loading" style="margin:auto">
-        <img src="https://i.imgur.com/2cp3TAB.png" width="150px" alt="Caricando...">
+            <img src="https://i.imgur.com/2cp3TAB.png" width="150px" alt="Caricando...">
         </div>
         <div id="list" class="table-responsive" style="display: none;">
             <table class="table table-hover table-bordered table-condensed" id="listtable"
@@ -227,7 +229,7 @@
                 <thead>
                     <tr>
                         <th onclick="fetchAuleLibere('name')">Aula</th>
-                        <th onclick="fetchAuleLibere('duration')">Libera per</th>
+                        <th onclick="fetchAuleLibere('duration')">Libera fino alle</th>
                         <th>Note</th>
                     </tr>
                 </thead>
