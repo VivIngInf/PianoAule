@@ -103,7 +103,7 @@
                     today_events.sort((a, b) => a.start - b.start) // Ordino temporalmente
                     if (today_events.some(event => (event.start < today && today < event.end))) return;
                     today_events = today_events.filter(event => event.start > today); // Elimino le lezioni precedenti
-                    if (today_events.length > 0){
+                    if (today_events.length > 0) {
                         data.next_event = today_events[0];
                         data.duration = data.next_event.start.getHours() - today.getHours();
                     }
@@ -142,7 +142,119 @@
             })
         }
         window.addEventListener("load", () => {
-            try { google.script.run.withSuccessHandler(save).webifyData(); } catch { }
+            try {
+                google.script.run.withSuccessHandler(save).webifyData();
+            }
+            catch {
+                // Local Testing
+                isLoading = false;
+                coppie = {
+                    '322': {
+                        aula: "F130",
+                        events: [
+                            {
+                                "title": "Lezione Prof. GAGLIO SALVATORE - Mod. FONDAMENTI DI PROGRAMMAZIONE",
+                                "start": new Date("2022-05-13T09:00:00.000Z"),
+                                "end": new Date("2022-05-13T11:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-high"
+                            },
+                            {
+                                "title": "Lezione Prof.ssa VALENTI ANGELA - ALGEBRA",
+                                "start": new Date("2022-05-13T06:00:00.000Z"),
+                                "end": new Date("2022-05-13T09:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-high"
+                            },
+                            {
+                                "title": "Lezione Prof. PERI DANIELE - Mod. ARCHITETTURE DI BASE DEI CALCOLATORI",
+                                "start": new Date("2022-05-12T08:00:00.000Z"),
+                                "end": new Date("2022-05-12T11:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-high"
+                            },
+                            {
+                                "title": "Lezione Prof.ssa BRANDOLINI BARBARA - ANALISI MATEMATICA C.I.",
+                                "start": new Date("2022-05-12T06:00:00.000Z"),
+                                "end": new Date("2022-05-12T08:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-high"
+                            },
+                            {
+                                "title": "Lezione Prof. VASSALLO GIORGIO - FISICA I",
+                                "start": new Date("2022-05-11T14:00:00.000Z"),
+                                "end": new Date("2022-05-11T16:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-high"
+                            },
+                            {
+                                "title": "Lezione Prof. PERI DANIELE - Mod. ARCHITETTURE DI BASE DEI CALCOLATORI",
+                                "start": new Date("2022-05-11T12:00:00.000Z"),
+                                "end": new Date("2022-05-11T14:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-high"
+                            },
+                            {
+                                "title": "Lezione Prof.ssa FRANCOMANO ELISA - METODI NUMERICI",
+                                "start": new Date("2022-05-11T07:00:00.000Z"),
+                                "end": new Date("2022-05-11T10:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-normal"
+                            },
+                            {
+                                "title": "Lezione Prof.ssa BRANDOLINI BARBARA - ANALISI MATEMATICA C.I.",
+                                "start": new Date("2022-05-10T12:00:00.000Z"),
+                                "end": new Date("2022-05-10T15:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-high"
+                            },
+                            {
+                                "title": "Lezione Prof. SORBELLO ROSARIO - BASI DI DATI E SISTEMI INFORMATIVI",
+                                "start": new Date("2022-05-10T09:00:00.000Z"),
+                                "end": new Date("2022-05-10T11:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-normal"
+                            },
+                            {
+                                "title": "Lezione Prof.ssa FRANCOMANO ELISA - METODI NUMERICI",
+                                "start": new Date("2022-05-10T07:00:00.000Z"),
+                                "end": new Date("2022-05-10T09:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-normal"
+                            },
+                            {
+                                "title": "Lezione Prof. VASSALLO GIORGIO - FISICA I",
+                                "start": new Date("2022-05-09T14:00:00.000Z"),
+                                "end": new Date("2022-05-09T16:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-high"
+                            },
+                            {
+                                "title": "Lezione Prof.ssa VALENTI ANGELA - ALGEBRA",
+                                "start": new Date("2022-05-09T12:00:00.000Z"),
+                                "end": new Date("2022-05-09T14:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-high"
+                            },
+                            {
+                                "title": "Lezione Prof. SORBELLO ROSARIO - BASI DI DATI E SISTEMI INFORMATIVI",
+                                "start": new Date("2022-05-09T08:00:00.000Z"),
+                                "end": new Date("2022-05-09T11:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-normal"
+                            },
+                            {
+                                "title": "Lezione Prof.ssa FRANCOMANO ELISA - METODI NUMERICI",
+                                "start": new Date("2022-05-09T06:00:00.000Z"),
+                                "end": new Date("2022-05-09T08:00:00.000Z"),
+                                "allDay": false,
+                                "className": "calendario-lezioni-event-normal"
+                            }
+                        ]
+                    }
+                }
+                coppie = new Map(Object.entries(coppie));
+            }
             let today = new Date();
             // Default Day
             let currD = today.getDay();
