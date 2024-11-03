@@ -39,7 +39,7 @@ parser.add_argument("--verbose", "-v", action="store_true", default=False, help=
 args = parser.parse_args()
 SINGLE_FILE = not args.multi_file
 WEEK_OFFSET = args.week_offset
-CLEANUP = args.cleanup
+CLEANUP = args.cleanup or []
 logging.basicConfig(level=logging.ERROR)
 lvl = logging.DEBUG if args.verbose else logging.INFO
 logger = logging.getLogger(name="Piano Aule by VI")
@@ -307,6 +307,7 @@ def create_final_csv(filename, calendari: dict, **kwargs: dict):
                 day = str(GIORNI_DELLA_SETTIMANA[start_wd])
                 logger.debug(f"WD: {start_wd} | DAY: {day} | START: {start_h} | END: {end_h}")
                 end_h = 19 if end_h > 19 else end_h
+                start_h = 8 if start_h < 8 else start_h
                 for i in range(start_h, end_h):
                     # aggiungo la lezione alla riga csv per tutta la durata di quest'ultima
                     # come chiave di questa entry metto il nome del giorno + l'ora della lezione
@@ -367,7 +368,7 @@ def csv_to_xlsx(csv_basename: str, xlsx_basename: str = None):
 
 def xlsx_to_png(xlsx_basename: str, png_basename: str = None, cell_range: str = "A1:BH48"):
     # conversione da xlsx a bmp tramite range d'azione
-    logger.info(f"Convertendo il file {png_basename} excel in png...")
+    logger.info(f"Convertendo il file {xlsx_basename} excel in png...")
     bmp_filename = f"{xlsx_basename}.bmp"
     excel2img.export_img(xlsx_basename + '.xlsx', bmp_filename, "", f"Sheet!{cell_range}")
     piano = Image.open(bmp_filename)
